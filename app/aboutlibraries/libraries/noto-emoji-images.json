@@ -1,0 +1,16 @@
+{
+  "uniqueId": "com.googlefonts:noto-emoji-images",
+  "developers": [
+    {
+      "name": "Google LLC",
+      "organisationUrl": "https://github.com/googlefonts"
+    }
+  ],
+  "artifactVersion": "v2.051",
+  "description": "用于统一输入法 Emoji 风格的 Noto Emoji PNG 图像资源。",
+  "name": "Google Noto Emoji Images",
+  "website": "https://github.com/googlefonts/noto-emoji",
+  "licenses": [
+    "Apache-2.0"
+  ]
+}

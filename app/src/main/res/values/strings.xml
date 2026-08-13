@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">SougouEmojiFixer</string>
+    <string name="xposed_description">为搜狗输入法小米版补全并统一 Unicode Emoji</string>
+    <string name="open_source_licenses">开源许可证</string>
+</resources>

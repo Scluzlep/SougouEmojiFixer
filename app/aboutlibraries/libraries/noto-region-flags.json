@@ -1,0 +1,16 @@
+{
+  "uniqueId": "com.googlefonts:noto-emoji-region-flags",
+  "developers": [
+    {
+      "name": "Google LLC",
+      "organisationUrl": "https://github.com/googlefonts"
+    }
+  ],
+  "artifactVersion": "v2.051",
+  "description": "Noto Emoji 的国家和地区旗帜图像；来源逐项确认为公有领域或依法不受版权保护。",
+  "name": "Noto Emoji Region Flags",
+  "website": "https://github.com/googlefonts/noto-emoji/tree/v2.051/third_party/region-flags",
+  "licenses": [
+    "noto-region-flags-public-domain"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "uniqueId": "org.unicode:emoji-data",
+  "developers": [
+    {
+      "name": "Unicode, Inc.",
+      "organisationUrl": "https://www.unicode.org/"
+    }
+  ],
+  "description": "Unicode Emoji 数据文件（包括 emoji-test.txt），运行时可选择官方稳定版本。",
+  "name": "Unicode Emoji Data",
+  "website": "https://www.unicode.org/Public/",
+  "licenses": [
+    "unicode-license-v3"
+  ]
+}
