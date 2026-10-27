@@ -128,3 +128,12 @@ git push origin v1.1.0-zip.1
 ```
 
 许可证保持上游 GPL-3.0，保留原作者版权。
+
+
+### ZIP 读取权限修复 (v1.1.0-zip.2)
+
+Android 17 上搜狗输入法使用动态注册的广播接收器读取安装指令时，广播附带的 `FLAG_GRANT_READ_URI_PERMISSION` 可能不能直接授予读取权限，导致 `Permission Denial ... FileProvider ... not exported`。
+
+此版本在广播发送之前由模块主动执行 `Context.grantUriPermission(TARGET_PACKAGE, archiveUri, FLAG_GRANT_READ_URI_PERMISSION)`，仅向搜狗包授予临时只读权限；任务完成或出错收到状态回执后撤销。FileProvider **继续保持 `android:exported="false"`**，无需打开数据目录或赋予更广泛权限。
+
+已缓存的 Noto ZIP 仍位于模块自己的私有目录；升级 APK 后直接再次点击安装即可，无须重新下载。

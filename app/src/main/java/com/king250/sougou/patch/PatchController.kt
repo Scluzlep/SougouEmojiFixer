@@ -31,6 +31,9 @@ class PatchController(
     private var registered = false
     private var sessionId = UUID.randomUUID().toString()
     private var pingJob: Job? = null
+    // Explicit package grant: Android may not propagate ClipData URI grants to
+    // a dynamically registered BroadcastReceiver in the target IME process.
+    private var grantedArchiveUri: Uri? = null
     private val logStore = RunLogStore(appContext)
     private val mutableLogs = MutableStateFlow(logStore.read())
 
@@ -85,6 +88,9 @@ class PatchController(
                 groupEntryCounts = groupEntryCounts,
                 currentOrder = currentOrder,
             )
+            if (phase == PatchPhase.COMPLETE || phase == PatchPhase.ERROR) {
+                revokeArchiveGrant()
+            }
             if (!mutableState.value.isRunning) {
                 pingJob?.cancel()
                 pingJob = null
@@ -148,11 +154,40 @@ class PatchController(
 
     fun close() {
         stop()
+        // Do not revoke an ongoing install's grant when our Activity is closed:
+        // the Sogou process is still reading the ZIP asynchronously.
+        if (!mutableState.value.isRunning) revokeArchiveGrant()
         scope.cancel()
+    }
+
+    private fun revokeArchiveGrant() {
+        grantedArchiveUri?.let { uri ->
+            runCatching {
+                appContext.revokeUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            grantedArchiveUri = null
+        }
     }
 
     fun install(configuration: PatchConfiguration, archiveUri: Uri) {
         if (!mutableState.value.canInstall) return
+        revokeArchiveGrant()
+        try {
+            // Required for exported=false FileProvider when Sogou receives the
+            // URI in a dynamic broadcast rather than an Activity launch.
+            appContext.grantUriPermission(
+                PatchProtocol.TARGET_PACKAGE,
+                archiveUri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION,
+            )
+            grantedArchiveUri = archiveUri
+        } catch (error: SecurityException) {
+            mutableState.value = mutableState.value.copy(
+                phase = PatchPhase.ERROR,
+                message = "无法授权搜狗读取 ZIP：${error.message}",
+            )
+            return
+        }
         sessionId = UUID.randomUUID().toString()
         mutableState.value = mutableState.value.copy(
             phase = PatchPhase.FETCHING_MANIFEST,
