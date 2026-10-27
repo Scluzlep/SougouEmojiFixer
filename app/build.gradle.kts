@@ -7,13 +7,13 @@ plugins {
 android {
     namespace = "com.king250.sougou"
     compileSdk {
-        version = release(37)
+        version = release(36)
     }
 
     defaultConfig {
         applicationId = "com.scluzlep.sougou"
         minSdk = 26
-        targetSdk = 37
+        targetSdk = 36
         versionCode = 11001
         versionName = "1.1.0-zip.1"
 
