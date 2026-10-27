@@ -25,7 +25,11 @@ jobs:
           SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
           SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
           test -x "$SDKMANAGER"
-          "$SDKMANAGER" --sdk_root="$SDK_ROOT" --install 'platforms;android-36' 'build-tools;36.0.0'
+          "$SDKMANAGER" --sdk_root="$SDK_ROOT" --install --channel=3 'platforms;android-37.0' 'build-tools;36.0.0'
+          # API 37 preview is installed as android-37.0, while AGP may look for android-37.
+          if [[ ! -e "$SDK_ROOT/platforms/android-37" && -d "$SDK_ROOT/platforms/android-37.0" ]]; then
+            ln -s android-37.0 "$SDK_ROOT/platforms/android-37"
+          fi
       - name: Build installable APK
         env:
           SIGNING_STORE_BASE64: ${{ secrets.SIGNING_STORE_BASE64 }}
@@ -36,13 +40,20 @@ jobs:
           set -euo pipefail
           chmod +x gradlew
           mkdir -p dist
-          if [[ -n "$SIGNING_STORE_BASE64" && -n "$ANDROID_KEYSTORE_PASSWORD" && -n "$ANDROID_KEY_ALIAS" && -n "$ANDROID_KEY_PASSWORD" ]]; then
-            export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/release-keystore.jks"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            if [[ -z "$SIGNING_STORE_BASE64" || -z "$ANDROID_KEYSTORE_PASSWORD" || -z "$ANDROID_KEY_ALIAS" || -z "$ANDROID_KEY_PASSWORD" ]]; then
+              echo '::error::Release signing secrets are missing. Refusing to publish a debug-signed APK as a release.'
+              exit 1
+            fi
+            export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/release-keystore.p12"
             printf '%s' "$SIGNING_STORE_BASE64" | base64 --decode > "$ANDROID_KEYSTORE_PATH"
             ./gradlew --no-daemon :app:assembleRelease
             cp app/build/outputs/apk/release/app-release.apk dist/SougouEmojiFixer-Zip-release.apk
+            SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+            APKSIGNER="$(find "$SDK_ROOT/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+            test -x "$APKSIGNER"
+            "$APKSIGNER" verify --verbose dist/SougouEmojiFixer-Zip-release.apk
           else
-            echo '::warning::No signing secrets configured; this is a DEBUG-signed build and cannot be used as a stable in-place update.'
             ./gradlew --no-daemon :app:assembleDebug
             cp app/build/outputs/apk/debug/app-debug.apk dist/SougouEmojiFixer-Zip-debug.apk
           fi

@@ -117,9 +117,9 @@ https://codeload.github.com/googlefonts/noto-emoji/zip/refs/tags/v2.051
 ### GitHub Actions 和 Release
 
 工作流 `.github/workflows/android-release.yml`：
-- Push / PR / 手动运行：构建 APK，并在 Actions **Artifacts** 上传 APK 和 SHA256SUMS。
+- Push / PR / 手动运行：构建 Debug 签名 APK，并在 Actions **Artifacts** 上传 APK 和 SHA256SUMS。
 - 推送 `v*` 标签：构建 APK，并自动创建 GitHub **Release**。
-- 默认未配置签名密钥时：发布 debug 签名 APK；以后每次构建可能无法稳定覆盖更新。
+- 未配置签名密钥时：非标签构建只产生 Debug Artifact；推送 Release 标签会明确失败，绝不把 Debug APK 误当正式发布。
 - 正式版建议配置四个 Repository Secrets：`SIGNING_STORE_BASE64`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`。
 
 ```bash
