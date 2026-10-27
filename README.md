@@ -92,3 +92,39 @@
 ## 免责声明
 
 本项目仅供学习与技术研究使用。请勿将其用于任何违反软件许可协议或当地法律法规的用途。使用本模块造成的任何后果由使用者自行承担。
+
+
+---
+
+## Fork 功能：Noto ZIP 缓存 / 离线导入
+
+本 Fork 将「数千个网络请求逐张下载 PNG」替换为「下载一次 Noto Emoji v2.051 ZIP → 仅提取所需 PNG → 安装」，并保留上游的 Unicode 词条解析、分组管理、肤色支持及 LSPosed Hook。
+
+- **自动下载**：单次获取 [googlefonts/noto-emoji v2.051](https://github.com/googlefonts/noto-emoji/tree/v2.051) 官方源码 ZIP；服务器支持 Range 时可断点续传。
+- **本地导入**：首页点击「导入本地 Noto Emoji ZIP」，支持官方源码 ZIP（可包含前缀目录），或已经裁剪的 PNG ZIP。
+- **缓存复用**：导入或下载后，模块把需要的 PNG（包括旗帜）重新打包成精简 ZIP，存入自己的私有目录。下一次安装无需下载。
+- **数据隔离**：ZIP 保存在模块 `/data/user/0/com.scluzlep.sougou/files/noto-archive/`。搜狗进程通过 Android FileProvider 临时读取，不需要复制 ZIP 到搜狗目录。
+- **安装阶段**：搜狗自己的 `files/sogou/.unicode-staging` 仍会写入转换为 64px 的 PNG 和分组信息；全部验证后才移动到 `emojipackage`。这是搜狗现有分组目录的必要工作区。
+
+**注意：** 本 Fork 使用独立包名 `com.scluzlep.sougou`，可与上游的 `com.king250.sougou` 共存，但为防重复 Hook，**请先在 LSPosed 禁用上游模块的作用域**，只启用此 Fork 的作用域（搜狗输入法小米版）。开发版本仍需备份重要的输入法数据后再试用。
+
+官方 ZIP 地址（也可在浏览器下载后导入）：
+
+```text
+https://codeload.github.com/googlefonts/noto-emoji/zip/refs/tags/v2.051
+```
+
+### GitHub Actions 和 Release
+
+工作流 `.github/workflows/android-release.yml`：
+- Push / PR / 手动运行：构建 APK，并在 Actions **Artifacts** 上传 APK 和 SHA256SUMS。
+- 推送 `v*` 标签：构建 APK，并自动创建 GitHub **Release**。
+- 默认未配置签名密钥时：发布 debug 签名 APK；以后每次构建可能无法稳定覆盖更新。
+- 正式版建议配置四个 Repository Secrets：`SIGNING_STORE_BASE64`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`。
+
+```bash
+git tag v1.1.0-zip.1
+git push origin v1.1.0-zip.1
+```
+
+许可证保持上游 GPL-3.0，保留原作者版权。
