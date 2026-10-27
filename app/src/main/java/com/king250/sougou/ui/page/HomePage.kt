@@ -49,6 +49,9 @@ fun HomePage(
     versionsLoading: Boolean,
     versionsMessage: String,
     onInstall: () -> Unit,
+    onImportArchive: () -> Unit,
+    archiveMessage: String,
+    archiveBusy: Boolean,
     onRefreshVersions: () -> Unit,
     onSelectVersion: (UnicodeVersionOption) -> Unit,
 ) {
@@ -73,9 +76,15 @@ fun HomePage(
             onSelect = onSelectVersion,
         )
         SourceCard(configuration)
+        OutlinedButton(
+            onClick = onImportArchive,
+            enabled = !archiveBusy && !state.isRunning,
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text("导入本地 Noto Emoji ZIP") }
+        Text(archiveMessage, style = MaterialTheme.typography.bodySmall)
         Button(
             onClick = onInstall,
-            enabled = state.canInstall,
+            enabled = state.canInstall && !archiveBusy,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),

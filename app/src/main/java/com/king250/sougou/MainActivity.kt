@@ -1,6 +1,8 @@
 package com.king250.sougou
 
 import android.os.Bundle
+import android.net.Uri
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -12,6 +14,11 @@ import com.king250.sougou.ui.theme.SougouInputEmojiFixerTheme
 
 class MainActivity : ComponentActivity() {
     private val viewModel: PatchViewModel by viewModels()
+    private val pickNotoArchive = registerForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri: Uri? ->
+        if (uri != null) viewModel.importArchive(uri)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,6 +31,8 @@ class MainActivity : ComponentActivity() {
             val versionsLoading by viewModel.versionsLoading.collectAsState()
             val versionsMessage by viewModel.versionsMessage.collectAsState()
             val logs by viewModel.logs.collectAsState()
+            val archiveMessage by viewModel.archiveMessage.collectAsState()
+            val archiveBusy by viewModel.archiveBusy.collectAsState()
             SougouInputEmojiFixerTheme {
                 EmojiFixerApp(
                     state = state,
@@ -33,6 +42,11 @@ class MainActivity : ComponentActivity() {
                     versionsMessage = versionsMessage,
                     logs = logs,
                     onInstall = viewModel::install,
+                    onImportArchive = {
+                        pickNotoArchive.launch(arrayOf("application/zip", "application/octet-stream"))
+                    },
+                    archiveMessage = archiveMessage,
+                    archiveBusy = archiveBusy,
                     onRefreshVersions = viewModel::refreshVersions,
                     onSelectVersion = viewModel::selectVersion,
                     onMoveGroup = viewModel::moveGroup,
