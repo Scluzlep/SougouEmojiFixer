@@ -11,7 +11,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.king250.sougou"
+        applicationId = "com.scluzlep.sougou"
         minSdk = 26
         targetSdk = 37
         versionCode = 11001

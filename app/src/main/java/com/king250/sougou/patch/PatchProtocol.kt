@@ -1,7 +1,7 @@
 package com.king250.sougou.patch
 
 object PatchProtocol {
-    const val MODULE_PACKAGE = "com.king250.sougou"
+    const val MODULE_PACKAGE = "com.scluzlep.sougou"
     const val TARGET_PACKAGE = "com.sohu.inputmethod.sogou.xiaomi"
 
     const val ACTION_COMMAND = "$MODULE_PACKAGE.action.EMOJI_PATCH_COMMAND"
