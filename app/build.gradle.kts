@@ -14,8 +14,8 @@ android {
         applicationId = "com.scluzlep.misougoemoji"
         minSdk = 26
         targetSdk = 36
-        versionCode = 11001
-        versionName = "1.1.0-zip.1"
+        versionCode = 11002
+        versionName = "1.1.0-zip.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
