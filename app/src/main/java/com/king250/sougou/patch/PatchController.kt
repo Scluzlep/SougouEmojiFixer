@@ -4,6 +4,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.ClipData
+import android.net.Uri
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
@@ -149,7 +151,7 @@ class PatchController(
         scope.cancel()
     }
 
-    fun install(configuration: PatchConfiguration) {
+    fun install(configuration: PatchConfiguration, archiveUri: Uri) {
         if (!mutableState.value.canInstall) return
         sessionId = UUID.randomUUID().toString()
         mutableState.value = mutableState.value.copy(
@@ -158,7 +160,7 @@ class PatchController(
             total = 0,
             message = "已发送安装请求…",
         )
-        sendCommand(PatchProtocol.COMMAND_INSTALL, configuration)
+        sendCommand(PatchProtocol.COMMAND_INSTALL, configuration, archiveUri)
     }
 
     fun applyOrder(configuration: PatchConfiguration) {
@@ -187,12 +189,18 @@ class PatchController(
     private fun sendCommand(
         command: String,
         configuration: PatchConfiguration? = null,
+        archiveUri: Uri? = null,
     ) {
         val intent = Intent(PatchProtocol.ACTION_COMMAND)
             .setPackage(PatchProtocol.TARGET_PACKAGE)
             .putExtra(PatchProtocol.EXTRA_COMMAND, command)
             .putExtra(PatchProtocol.EXTRA_SESSION_ID, sessionId)
         configuration?.putInto(intent)
+        archiveUri?.let { uri ->
+            intent.putExtra(PatchProtocol.EXTRA_ARCHIVE_URI, uri)
+            intent.clipData = ClipData.newUri(appContext.contentResolver, "Noto ZIP", uri)
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
         appContext.sendBroadcast(intent)
     }
 

@@ -4,6 +4,8 @@ import android.annotation.SuppressLint
 import android.app.Application
 import android.content.BroadcastReceiver
 import android.content.Context
+import android.net.Uri
+import android.os.Build
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Process
@@ -122,6 +124,22 @@ private object RuntimeBridge {
                         }
 
                         val configuration = PatchConfiguration.fromIntent(intent)
+                        @Suppress("DEPRECATION")
+                        val archiveUri: Uri? = if (Build.VERSION.SDK_INT >= 33) {
+                            intent.getParcelableExtra(PatchProtocol.EXTRA_ARCHIVE_URI, Uri::class.java)
+                        } else {
+                            intent.getParcelableExtra(PatchProtocol.EXTRA_ARCHIVE_URI)
+                        }
+                        val archiveFd = runCatching {
+                            requireNotNull(archiveUri) { "没有提供 Noto ZIP URI" }
+                            requireNotNull(receiverContext.contentResolver.openFileDescriptor(archiveUri, "r")) {
+                                "无法读取 Noto ZIP"
+                            }
+                        }.getOrElse { error ->
+                            sendStatus(receiverContext, sessionId, PatchPhase.ERROR, 0, 0,
+                                "读取 ZIP 失败：${error.message}")
+                            return
+                        }
                         operationJob = scope.launch {
                             sendLog(
                                 receiverContext,
@@ -130,10 +148,11 @@ private object RuntimeBridge {
                             )
                             var loggedPhase: PatchPhase? = null
                             val result = runCatching {
-                                EmojiInstaller(
-                                    receiverContext.applicationContext,
-                                    configuration,
-                                ).install { update ->
+                                archiveFd.use { fd ->
+                                    EmojiInstaller(
+                                        receiverContext.applicationContext,
+                                        configuration,
+                                    ).install(fd) { update ->
                                     lastPhase = update.phase
                                     lastCurrent = update.current
                                     lastTotal = update.total
@@ -150,6 +169,7 @@ private object RuntimeBridge {
                                         loggedPhase = update.phase
                                         sendLog(receiverContext, "INFO", update.message)
                                     }
+                                }
                                 }
                             }
                             result.onFailure { error ->

@@ -1,13 +1,14 @@
 package com.king250.sougou.patch
 
 object PatchProtocol {
-    const val MODULE_PACKAGE = "com.king250.sougou"
+    const val MODULE_PACKAGE = "com.scluzlep.misougoemoji"
     const val TARGET_PACKAGE = "com.sohu.inputmethod.sogou.xiaomi"
 
     const val ACTION_COMMAND = "$MODULE_PACKAGE.action.EMOJI_PATCH_COMMAND"
     const val ACTION_STATUS = "$MODULE_PACKAGE.action.EMOJI_PATCH_STATUS"
     const val ACTION_LOG = "$MODULE_PACKAGE.action.EMOJI_PATCH_LOG"
 
+    const val EXTRA_ARCHIVE_URI = "noto_archive_uri"
     const val EXTRA_COMMAND = "command"
     const val EXTRA_SESSION_ID = "session_id"
     const val EXTRA_PHASE = "phase"

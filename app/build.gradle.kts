@@ -11,17 +11,30 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.king250.sougou"
+        applicationId = "com.scluzlep.misougoemoji"
         minSdk = 26
-        targetSdk = 37
-        versionCode = 10000
-        versionName = "1.0.0"
+        targetSdk = 36
+        versionCode = 11001
+        versionName = "1.1.0-zip.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("ciRelease") {
+            System.getenv("ANDROID_KEYSTORE_PATH")?.takeIf { it.isNotBlank() }?.let { path ->
+                storeFile = file(path)
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
     buildTypes {
         release {
+            if (!System.getenv("ANDROID_KEYSTORE_PATH").isNullOrBlank()) {
+                signingConfig = signingConfigs.getByName("ciRelease")
+            }
             optimization {
                 enable = false
             }

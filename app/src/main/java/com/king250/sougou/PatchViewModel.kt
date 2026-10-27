@@ -1,6 +1,8 @@
 package com.king250.sougou
 
 import android.app.Application
+import android.net.Uri
+import com.king250.sougou.patch.NotoArchiveCache
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.king250.sougou.patch.AppSettingsStore
@@ -24,6 +26,12 @@ class PatchViewModel(application: Application) : AndroidViewModel(application) {
     private val settingsStore = AppSettingsStore(application)
     private val versionRepository = UnicodeVersionRepository()
     private val mutableConfiguration = MutableStateFlow(PatchConfiguration())
+    private val mutableArchiveMessage = MutableStateFlow(
+        "自动下载官方 Noto ZIP 并复用缓存；也可导入本地 ZIP。"
+    )
+    private val mutableArchiveBusy = MutableStateFlow(false)
+    val archiveMessage = mutableArchiveMessage.asStateFlow()
+    val archiveBusy = mutableArchiveBusy.asStateFlow()
     private val mutableVersions = MutableStateFlow(
         listOf(
             UnicodeVersionOption(
@@ -79,7 +87,37 @@ class PatchViewModel(application: Application) : AndroidViewModel(application) {
 
     fun stop() = controller.stop()
 
-    fun install() = controller.install(mutableConfiguration.value)
+    fun install() {
+        if (mutableArchiveBusy.value || !controller.state.value.canInstall) return
+        viewModelScope.launch {
+            mutableArchiveBusy.value = true
+            try {
+                val context = getApplication<Application>()
+                val uri = NotoArchiveCache.cached(context) ?:
+                    NotoArchiveCache.download(context) { mutableArchiveMessage.value = it }
+                controller.install(mutableConfiguration.value, uri)
+            } catch (error: Exception) {
+                mutableArchiveMessage.value = "ZIP 获取失败：${error.message}（可选择本地导入）"
+            } finally {
+                mutableArchiveBusy.value = false
+            }
+        }
+    }
+
+    fun importArchive(uri: Uri) {
+        if (mutableArchiveBusy.value || controller.state.value.isRunning) return
+        viewModelScope.launch {
+            mutableArchiveBusy.value = true
+            try {
+                val context = getApplication<Application>()
+                NotoArchiveCache.importZip(context, uri) { mutableArchiveMessage.value = it }
+            } catch (error: Exception) {
+                mutableArchiveMessage.value = "导入失败：${error.message}"
+            } finally {
+                mutableArchiveBusy.value = false
+            }
+        }
+    }
 
     fun applyOrder(order: List<Int>) {
         updateConfiguration { copy(groupOrder = order) }

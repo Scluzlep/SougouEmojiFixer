@@ -22,6 +22,9 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import java.io.File
 import java.io.FileOutputStream
+import java.io.FileInputStream
+import android.os.ParcelFileDescriptor
+import java.util.zip.ZipInputStream
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.min
@@ -48,7 +51,7 @@ class EmojiInstaller(
         }
     }
 
-    suspend fun install(onProgress: (PatchUpdate) -> Unit) {
+    suspend fun install(archive: ParcelFileDescriptor, onProgress: (PatchUpdate) -> Unit) {
         try {
             onProgress(
                 PatchUpdate(
@@ -99,7 +102,7 @@ class EmojiInstaller(
             )
 
             val layout = prepareStaging(entries)
-            downloadAllImages(entries, layout, onProgress)
+            installImagesFromZip(entries, layout, archive, onProgress)
             writePackageMetadata(entries, layout)
             validateStaging(entries, layout)
 
@@ -135,67 +138,87 @@ class EmojiInstaller(
         }.body<String>()
     }
 
-    private suspend fun downloadAllImages(
+    private suspend fun installImagesFromZip(
         entries: List<EmojiEntry>,
         layout: InstallLayout,
+        archive: ParcelFileDescriptor,
         onProgress: (PatchUpdate) -> Unit,
     ) {
-        val downloads = entries.flatMap { entry ->
-            buildList {
-                add(
-                    ImageDownload(
-                        packageId = entry.group.packageId,
-                        fileName = "${entry.imageId}.png",
-                        sourceUrl = entry.sourceUrl,
-                    ),
-                )
-                entry.skinVariants.forEach { variant ->
-                    add(
-                        ImageDownload(
-                            packageId = entry.group.packageId,
-                            fileName = "${entry.imageId}_${variant.suffix}.png",
-                            sourceUrl = variant.sourceUrl,
-                        ),
-                    )
+        val needed = HashMap<String, MutableList<Pair<Int, String>>>()
+        fun add(packageId: Int, fileName: String, source: String) {
+            val path = when {
+                source.contains("/third_party/region-flags/png/") ->
+                    "third_party/region-flags/png/" +
+                        source.substringAfter("/third_party/region-flags/png/")
+                source.contains("/png/128/") ->
+                    "png/128/" + source.substringAfter("/png/128/")
+                else -> error("未知 Noto 图片路径: $source")
+            }
+            needed.getOrPut(path) { mutableListOf() }.add(packageId to fileName)
+        }
+        entries.forEach { item ->
+            add(item.group.packageId, "${item.imageId}.png", item.sourceUrl)
+            item.skinVariants.forEach { variant ->
+                add(item.group.packageId,
+                    "${item.imageId}_${variant.suffix}.png", variant.sourceUrl)
+            }
+        }
+        val total = needed.values.sumOf { it.size }
+        var done = 0
+        ZipInputStream(FileInputStream(archive.fileDescriptor).buffered()).use { zip ->
+            while (true) {
+                val entry = zip.nextEntry ?: break
+                if (entry.isDirectory) {
+                    zip.closeEntry()
+                    continue
                 }
-            }
-        }
-        val completed = AtomicInteger(0)
-        val progressLock = Any()
-        var lastReported = 0
-
-        downloads.chunked(DOWNLOAD_CONCURRENCY).forEach { batch ->
-            coroutineScope {
-                batch.map { download ->
-                    async {
-                        val target = File(
-                            layout.packageDirectories.getValue(download.packageId),
-                            "emoji/${download.fileName}",
+                val name = entry.name.replace('\\', '/')
+                val key = when {
+                    name.startsWith("png/128/") -> name
+                    name.contains("/png/128/") -> "png/128/" + name.substringAfter("/png/128/")
+                    name.startsWith("third_party/region-flags/png/") -> name
+                    name.contains("/third_party/region-flags/png/") ->
+                        "third_party/region-flags/png/" +
+                        name.substringAfter("/third_party/region-flags/png/")
+                    else -> null
+                }
+                val targets = if (key == null) null else needed.remove(key)
+                if (targets != null) {
+                    val bytes = readZipPng(zip)
+                    targets.forEach { (packageId, fileName) ->
+                        val output = File(
+                            layout.packageDirectories.getValue(packageId),
+                            "emoji/$fileName",
                         )
-                        val bytes = downloadBytes(download.sourceUrl)
-                        writeNormalizedPng(bytes, target)
-
-                        val current = completed.incrementAndGet()
-                        synchronized(progressLock) {
-                            if (current > lastReported &&
-                                (current == downloads.size ||
-                                    current - lastReported >= PROGRESS_STEP)
-                            ) {
-                                lastReported = current
-                                onProgress(
-                                    PatchUpdate(
-                                        PatchPhase.DOWNLOADING,
-                                        current,
-                                        downloads.size,
-                                        "正在下载 Noto Emoji：$current / ${downloads.size}",
-                                    ),
-                                )
-                            }
-                        }
+                        writeNormalizedPng(bytes, output)
+                        done++
                     }
-                }.awaitAll()
+                    if (done % PROGRESS_STEP == 0 || done == total) {
+                        onProgress(PatchUpdate(PatchPhase.DOWNLOADING, done, total,
+                            "正在处理 ZIP 内的 Noto Emoji：$done / $total"))
+                    }
+                }
+                zip.closeEntry()
             }
         }
+        require(done == total) {
+            val missing = needed.keys.take(5).joinToString()
+            "ZIP 缺少 ${total - done} 张图片，请检查素材版本。示例：$missing"
+        }
+    }
+
+    private fun readZipPng(zip: ZipInputStream): ByteArray {
+        val result = java.io.ByteArrayOutputStream()
+        val buffer = ByteArray(32 * 1024)
+        while (true) {
+            val count = zip.read(buffer)
+            if (count < 0) break
+            require(result.size() + count <= 2 * 1024 * 1024) {
+                "ZIP 中图片超过 2 MiB，已拒绝读取"
+            }
+            result.write(buffer, 0, count)
+        }
+        return result.toByteArray()
     }
 
     private suspend fun downloadBytes(url: String): ByteArray = retrying(url) {
