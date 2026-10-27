@@ -103,10 +103,10 @@
 - **自动下载**：单次获取 [googlefonts/noto-emoji v2.051](https://github.com/googlefonts/noto-emoji/tree/v2.051) 官方源码 ZIP；服务器支持 Range 时可断点续传。
 - **本地导入**：首页点击「导入本地 Noto Emoji ZIP」，支持官方源码 ZIP（可包含前缀目录），或已经裁剪的 PNG ZIP。
 - **缓存复用**：导入或下载后，模块把需要的 PNG（包括旗帜）重新打包成精简 ZIP，存入自己的私有目录。下一次安装无需下载。
-- **数据隔离**：ZIP 保存在模块 `/data/user/0/com.scluzlep.sougou/files/noto-archive/`。搜狗进程通过 Android FileProvider 临时读取，不需要复制 ZIP 到搜狗目录。
+- **数据隔离**：ZIP 保存在模块 `/data/user/0/com.scluzlep.misougoemoji/files/noto-archive/`。搜狗进程通过 Android FileProvider 临时读取，不需要复制 ZIP 到搜狗目录。
 - **安装阶段**：搜狗自己的 `files/sogou/.unicode-staging` 仍会写入转换为 64px 的 PNG 和分组信息；全部验证后才移动到 `emojipackage`。这是搜狗现有分组目录的必要工作区。
 
-**注意：** 本 Fork 使用独立包名 `com.scluzlep.sougou`，可与上游的 `com.king250.sougou` 共存，但为防重复 Hook，**请先在 LSPosed 禁用上游模块的作用域**，只启用此 Fork 的作用域（搜狗输入法小米版）。开发版本仍需备份重要的输入法数据后再试用。
+**注意：** 本 Fork 使用独立包名 `com.scluzlep.misougoemoji`，可与上游的 `com.king250.sougou` 共存，但为防重复 Hook，**请先在 LSPosed 禁用上游模块的作用域**，只启用此 Fork 的作用域（搜狗输入法小米版）。开发版本仍需备份重要的输入法数据后再试用。
 
 官方 ZIP 地址（也可在浏览器下载后导入）：
 

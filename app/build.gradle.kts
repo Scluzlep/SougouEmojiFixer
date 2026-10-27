@@ -11,7 +11,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.scluzlep.sougou"
+        applicationId = "com.scluzlep.misougoemoji"
         minSdk = 26
         targetSdk = 36
         versionCode = 11001
